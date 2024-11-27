@@ -13,12 +13,11 @@ from git import Repo
 from openai import OpenAI
 from pathlib import Path
 from langchain.schema import Document
-from pinecone import Pinecone
 from git import Repo
+from rag import perform_rag
 
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-print(GROQ_API_KEY)
 
 # Show title and description.
 st.title("💬 Codebase RAG")
@@ -51,16 +50,10 @@ if prompt := st.chat_input("Chat..."):
         st.markdown(prompt)
 
     # Generate a response using the Groq API.    
-    llm_response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",
-        messages=[
-            {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.messages
-        ]
-    )
+    llm_response = perform_rag(client, prompt, "https://github.com/desantamaria/SecureAgent")
 
     # Write the response to the chat using `st.write`, then store it in 
     # session state.
     with st.chat_message("assistant"):
-        response = st.write(llm_response.choices[0].message.content)
+        response = st.write(llm_response)
     st.session_state.messages.append({"role": "assistant", "content": response})
