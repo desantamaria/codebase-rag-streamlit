@@ -26,6 +26,24 @@ pc = Pinecone(api_key=PINECONE_API_KEY)
 pinecone_index = pc.Index("codebase-rag")
 vectorstore = PineconeVectorStore(index_name="codebase-rag", embedding=HuggingFaceEmbeddings())
 
+def upload_repo_to_pinecone(file_content, repo_url):
+    # Insert the codebase embeddings into Pinecone
+    documents = []
+
+    for file in file_content:
+        doc = Document (
+            page_content=f"{file['name']}\n{file['content']}",
+            metadata={"source": file[ 'name']}
+        )
+        documents. append (doc)
+        
+    vectorstore = PineconeVectorStore.from_documents(
+        documents=documents,
+        embedding=HuggingFaceEmbeddings(),
+        index_name="codebase-rag",
+        namespace=repo_url
+    )
+
 # Create embeddings given string
 def get_huggingface_embeddings(text, model_name="sentence-transformers/all-mpnet-base-v2"):
     model = SentenceTransformer(model_name)

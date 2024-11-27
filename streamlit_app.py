@@ -14,7 +14,8 @@ from openai import OpenAI
 from pathlib import Path
 from langchain.schema import Document
 from git import Repo
-from rag import perform_rag
+from helpers.rag import perform_rag
+from helpers.repo import process_repo
 
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -28,6 +29,23 @@ st.write(
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
     api_key=GROQ_API_KEY
+)
+
+# Assign Default repo url
+codebase = "https://github.com/desantamaria/discord-clone"
+
+github_repo_url = st.text_input("Enter a GitHub repository url")
+
+if github_repo_url:
+    with st.spinner('Uploading Repository Data to Pinecone...'):
+        process_repo(github_repo_url)
+    st.write(
+    f"{github_repo_url} uploaded to Pinecone successfully!"
+    )
+    codebase = github_repo_url
+
+st.write(
+    f"Codebase in use: {codebase}"
 )
 
 # Create a session state variable to store the chat messages. This ensures that the
@@ -50,7 +68,7 @@ if prompt := st.chat_input("Chat..."):
         st.markdown(prompt)
 
     # Generate a response using the Groq API.    
-    llm_response = perform_rag(client, prompt, "https://github.com/desantamaria/SecureAgent")
+    llm_response = perform_rag(client, prompt, codebase)
 
     # Write the response to the chat using `st.write`, then store it in 
     # session state.
