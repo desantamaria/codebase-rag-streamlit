@@ -1,20 +1,11 @@
-import streamlit as st
 from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 from langchain_pinecone import PineconeVectorStore
-from langchain.embeddings import OpenAIEmbeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from pinecone import Pinecone
 from dotenv import load_dotenv
 import os
-import tempfile
-from github import Github, Repository
-from git import Repo
-from openai import OpenAI
-from pathlib import Path
 from langchain.schema import Document
 from pinecone import Pinecone
-from git import Repo
 
 load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
