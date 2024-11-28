@@ -8,11 +8,13 @@ from helpers.repo import process_repo
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# Initialize session state for codebase if it doesn't exist
+# Initialize session states
 if "selected_codebase" not in st.session_state:
     st.session_state.selected_codebase = None
-    
-# Add this callback function near the top of your file, after the session state initialization
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 def on_change():
     st.session_state.selected_codebase = st.session_state.repo_selector
     
@@ -21,7 +23,6 @@ def on_change():
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Show title and description.
 col1, col2 = st.columns([0.70, 0.30], gap="small")
 with col1:
     st.title("💬 Codebase RAG")
@@ -71,26 +72,28 @@ st.write(
     f"Codebase in use: {st.session_state.selected_codebase}"
 )
 
+# Chat Section
 if st.session_state.selected_codebase:
-    # Display the existing chat messages via `st.chat_message`.
+    # Display existing messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
+    # Chat input handling
     if prompt := st.chat_input("Chat..."):
-
-        # Store and display the current prompt.
+        # Store user message in session state 
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate a response using the Groq API.    
-        llm_response = perform_rag(client, prompt, st.session_state.selected_codebase)
-
-        # Write the response to the chat using `st.write`, then store it in 
-        # session state.
-        with st.chat_message("assistant"):
-            response = st.write(llm_response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        try:
+            # Generate and display assistant response
+            llm_response = perform_rag(client, prompt, st.session_state.selected_codebase)
+            with st.chat_message("assistant"):
+                st.write(llm_response)
+            
+            # Store assistant message correctly
+            st.session_state.messages.append({"role": "assistant", "content": llm_response})
+        
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
