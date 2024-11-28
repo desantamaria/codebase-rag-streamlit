@@ -19,28 +19,16 @@ if "messages" not in st.session_state:
 def select_codebase():
     options = fetch_repos_from_pincone()
     
-    # Use st.session_state to manage the selection
-    if 'selected_repo' not in st.session_state:
-        st.session_state.selected_repo = None
-    
-    def on_change():
-        # Explicitly set the selected codebase when selection changes
-        st.session_state.selected_codebase = st.session_state.repo_selector
-    
     # Create selectbox with explicit key and callback
     selected = st.selectbox(
         "Select a codebase already indexed to Pinecone:",
         options=options,
-        index=None,
+        index=options.index(st.session_state.selected_codebase) if st.session_state.selected_codebase in options else 0,
         placeholder="Select codebase",
-        key="repo_selector",
-        on_change=on_change
+        key="selected_codebase",
+        on_change=main
     )
-    
-    # Display the currently selected codebase immediately
-    if st.session_state.selected_codebase:
-        st.success(f"Selected Codebase: {st.session_state.selected_codebase}")
-    
+
     github_repo_url = st.text_input("Or paste a public GitHub Link:", placeholder="https://github.com/username/repo")
     process_github = st.button("Index GitHub Repository")
     
@@ -49,32 +37,31 @@ def select_codebase():
             process_repo(github_repo_url)
             st.write(f"{github_repo_url} uploaded to Pinecone successfully!")
 
-
 def main():
     col1, col2 = st.columns([0.70, 0.30], gap="small")
-    
+
     with col1:
         st.title("💬 Codebase RAG")
-    
+
     with col2:
         st.write("")
         st.write("")
         open_select_modal = st.button("Select Codebase")
-    
+
     st.write("This is a chatbot that uses Groq's Llama 3.1 Versatile model to generate responses.")
-    
+
     client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
         api_key=GROQ_API_KEY
     )
-    
+
     if open_select_modal:
         select_codebase()
-    
+
     # Always display the currently selected codebase
     if st.session_state.selected_codebase:
         st.write(f"Codebase in use: {st.session_state.selected_codebase}")
-    
+
     # Chat Section
     if st.session_state.selected_codebase:
         # Display existing messages
@@ -103,5 +90,4 @@ def main():
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
-if __name__ == "__main__":
-    main()
+main()
