@@ -22,7 +22,14 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Show title and description.
-st.title("💬 Codebase RAG")
+col1, col2 = st.columns([0.70, 0.30], gap="small")
+with col1:
+    st.title("💬 Codebase RAG")
+with col2:
+    st.write("")
+    st.write("")
+    open_select_modal = st.button("Select Codebase") 
+    
 st.write(
     "This is a chatbot that uses Groq's Llama 3.1 Versatile model to generate responses."
 )
@@ -32,27 +39,33 @@ client = OpenAI(
     api_key=GROQ_API_KEY
 )
 
-options = fetch_repos_from_pincone()
+@st.dialog("Start a new conversation")
+def select_codebase():
+    options = fetch_repos_from_pincone()
 
-# Create a selectbox and store its value properly
-selected = st.selectbox(
-    "Select a previously uploaded repository to Pinecone:",
-    options=options,
-    index=None,
-    placeholder="Select a repository",
-    key="repo_selector",
-    on_change=on_change
-)
-
-github_repo_url = st.text_input("Or upload a new GitHub repository:", placeholder="GitHub repository URL")
-
-if github_repo_url:
-    with st.spinner('Uploading Repository Data to Pinecone...'):
-        process_repo(github_repo_url)
-    st.write(
-    f"{github_repo_url} uploaded to Pinecone successfully!"
+    # Create a selectbox and store its value properly
+    selected = st.selectbox(
+        "Select a codebase already indexed to Pinecone:",
+        options=options,
+        index=None,
+        placeholder="Select codebase",
+        key="repo_selector",
+        on_change=on_change
     )
-    
+
+    github_repo_url = st.text_input("Or paste a public GitHub Link:", placeholder="https://github.com/username/repo")
+    process_github = st.button("Index GitHub Repository")
+
+    if process_github and github_repo_url:
+        with st.spinner('Uploading Repository Data to Pinecone...'):
+            process_repo(github_repo_url)
+        st.write(
+            f"{github_repo_url} uploaded to Pinecone successfully!"
+        )
+        
+
+if open_select_modal:
+    select_codebase()
     
 st.write(
     f"Codebase in use: {st.session_state.selected_codebase}"
