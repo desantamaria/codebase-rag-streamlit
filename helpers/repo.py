@@ -3,7 +3,7 @@ import os
 import tempfile
 from helpers.rag import upload_repo_to_pinecone
 
-SUPPORTED_EXTENSIONS= [".py", ".js", ".tsx", ".jsx", ".ts", ".java, .cpp"]
+SUPPORTED_EXTENSIONS= [".py", ".js", ".tsx", ".jsx", ".ts", ".java, .cpp, .md, .json"]
 
 IGNORED_DIRS = [".git", ".github", "dist", "__pycache__", ".next", ".env", ".vscode", "node_modules", ".venv", "h5"]
 
