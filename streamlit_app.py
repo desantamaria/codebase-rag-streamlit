@@ -97,9 +97,11 @@ def main():
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
-
-        # Optional image input
-        image = st.file_uploader("Upload an image for multimodal input: (Optional)", type=["png", "jpg", "jpeg"])
+                    
+        image = None
+        if not st.session_state.selected_model == "Groq's Llama 3.1":
+            # Optional image input
+            image = st.file_uploader("Upload an image for multimodal input: (Optional)", type=["png", "jpg", "jpeg"])
 
         # Display preview of image uploaded
         if image:
