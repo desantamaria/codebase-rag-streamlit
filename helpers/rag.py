@@ -7,6 +7,7 @@ import os
 from langchain.schema import Document
 from pinecone import Pinecone
 import google.generativeai as genai
+from PIL import Image
 
 
 load_dotenv()
@@ -53,7 +54,7 @@ def get_huggingface_embeddings(text, model_name="sentence-transformers/all-mpnet
     model = SentenceTransformer(model_name)
     return model.encode(text)
 
-def perform_rag(model, query, repo, selected_model):
+def perform_rag(model, query, repo, selected_model, image=None):
     raw_query_embedding = get_huggingface_embeddings(query)
     top_matches = pinecone_index.query(vector=raw_query_embedding.tolist(), top_k=5, include_metadata=True, namespace=repo)
 
@@ -77,9 +78,15 @@ def perform_rag(model, query, repo, selected_model):
         return llm_response.choices[0].message.content
 
     elif selected_model == "Google Gemini":
-        # Google Gemini API call
+        # Google Gemini API call with optional image input
         gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        llm_response = gemini_model.generate_content([augmented_query])
+        
+        if image:
+            img = Image.open(image)
+            llm_response = gemini_model.generate_content([augmented_query, img])
+        else:
+            llm_response = gemini_model.generate_content([augmented_query])
+        
         return llm_response.text
 
     else:

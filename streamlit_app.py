@@ -36,7 +36,7 @@ if "repos" not in st.session_state:
     st.session_state.repos = []
 
 if "selected_model" not in st.session_state:
-    st.session_state.selected_model = "Groq's Llama 3.1"  # Default model
+    st.session_state.selected_model = "Groq's Llama 3.1"
 
 
 # Fetch available codebases from Pinecone
@@ -98,20 +98,31 @@ def main():
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
+        # In the main chat function
         prompt = st.chat_input("Chat...")
-        if prompt:
-            st.session_state.messages.append({"role": "user", "content": prompt})
+
+        # Optional image input
+        image = st.file_uploader("Optionally upload an image for multimodal input:", type=["png", "jpg", "jpeg"])
+
+        # Display image uploaded
+        if image:
+            try:
+                st.image(image, caption="Uploaded Image")
+                st.write(f"File type: {image.type}, Name: {image.name}, Size: {image.size}")
+            except Exception as e:
+                st.error(f"Error handling the uploaded image: {e}")
+
+        if prompt or image:
+            st.session_state.messages.append({"role": "user", "content": prompt or "Image input provided"})
             with st.chat_message("user"):
-                st.markdown(prompt)
+                st.markdown(prompt or "Image uploaded")
 
             try:
-                # Pass selected model to perform_rag function
-                llm_response = perform_rag(
-                    groq_client if st.session_state.selected_model == "Groq's Llama 3.1" else genai, 
-                    prompt, 
-                    st.session_state.selected_codebase, 
-                    st.session_state.selected_model
-                )
+                # Switch between models based on user selection
+                if st.session_state.selected_model == "Groq's Llama 3.1":
+                    llm_response = perform_rag(groq_client, prompt, st.session_state.selected_codebase, "Groq's Llama 3.1")
+                else:
+                    llm_response = perform_rag(genai, prompt, st.session_state.selected_codebase, "Google Gemini", image=image)
 
                 st.session_state.messages.append({"role": "assistant", "content": llm_response})
                 with st.chat_message("assistant"):
@@ -119,6 +130,7 @@ def main():
 
             except Exception as e:
                 st.error(f"An error occurred: {e}")
+
 
 # Sidebar for codebase and model selection
 with st.sidebar:
