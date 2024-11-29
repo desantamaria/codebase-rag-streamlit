@@ -37,7 +37,7 @@ LANGUAGE_MAP = {
 
 def get_language_from_extension(file_name):
     ext = os.path.splitext(file_name)[1]
-    return LANGUAGE_MAP.get(ext, Language.JS)
+    return LANGUAGE_MAP.get(ext)
 
 def upload_repo_to_pinecone(file_content, repo_url):
     documents = []
@@ -87,15 +87,43 @@ def get_huggingface_embeddings(text, model_name="sentence-transformers/all-mpnet
 
 def perform_rag(model, query, repo, selected_model, image=None):
     raw_query_embedding = get_huggingface_embeddings(query)
-    top_matches = pinecone_index.query(vector=raw_query_embedding.tolist(), top_k=5, include_metadata=True, namespace=repo)
+    top_matches = pinecone_index.query(vector=raw_query_embedding.tolist(), top_k=10, include_metadata=True, namespace=repo)
 
     contexts = [item['metadata']['text'] for item in top_matches['matches']]
-    augmented_query = "\n" + "\n\n-------\n\n".join(contexts[:10]) + "\n-------\n\n\n\n\nMY QUESTION:\n" + query
+    file_names = [item['metadata']['source'] for item in top_matches['matches']]
+    
+    context_summary = "\n\n".join(
+        [f"File: {file_name}\nContent:\n{context[:500]}..." for file_name, context in zip(file_names, contexts)]
+    )
+
+    augmented_query = f"""
+    # Codebase Context:
+    {context_summary}
+
+    # Developer Question:
+    {query}
+
+    Please provide a response based on the provided context and the specific question.
+    """
 
     system_prompt = f"""
-    You are a Senior Software Engineer, specializing in TypeScript.
-    Answer questions based on the provided code context. Always use all available information to form your response.
-    At the beginning of your response, please list out the file names from the chunk metadata.
+    You are a Senior Software Engineer, specializing in TypeScript, Python, and JavaScript. 
+    You are helping a developer understand a codebase. You have access to multiple files and their context.
+
+    Your goal is to:
+    1. Provide clear explanations of the code based on the provided context.
+    2. Answer both general and specific questions about the repository.
+    3. Use all relevant information from the code context and metadata to form your response.
+    4. When answering, explain the purpose of the files, functions, or variables if relevant.
+
+    ### How to respond:
+    - Always include the file names from the chunk metadata in your response.
+    - For general questions, explain the project structure and any high-level files (e.g., README.md).
+    - If necessary, summarize or explain large code snippets to fit the response.
+    - If necessary, provide code in snippets to improve clarity.
+    - Be concise but thorough when explaining technical details.
+
+    # Provided context:
     """
 
     if selected_model == "Groq's Llama 3.1":

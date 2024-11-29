@@ -90,7 +90,6 @@ def main():
     else:
         st.warning("No codebase selected. Please select or index a new one.")
 
-    # Chat section
     if st.session_state.selected_codebase:
         # Display previous messages
         if st.session_state.messages:
@@ -100,7 +99,6 @@ def main():
                     
         image = None
         if not st.session_state.selected_model == "Groq's Llama 3.1":
-            # Optional image input
             image = st.file_uploader("Upload an image for multimodal input: (Optional)", type=["png", "jpg", "jpeg"])
 
         # Display preview of image uploaded
@@ -109,12 +107,9 @@ def main():
             st.write(f"File type: {image.type}, Name: {image.name}, Size: {image.size}")
             st.success("Image uploaded successfuly!")
             
-        # Chat input
         prompt = st.chat_input("Chat...")
             
-        # Only run if prompt is provided
         if prompt:
-            # Switch between models based on user selection
             if st.session_state.selected_model == "Groq's Llama 3.1":
                 llm_response = perform_rag(groq_client, prompt, st.session_state.selected_codebase, "Groq's Llama 3.1")
             else:
