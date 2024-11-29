@@ -82,7 +82,6 @@ def select_model():
     if selected_model != st.session_state.selected_model:
         st.session_state.selected_model = selected_model
 
-# Main function for chat
 def main():
     st.title("💬 Codebase RAG Chat")
 
@@ -93,44 +92,37 @@ def main():
 
     # Chat section
     if st.session_state.selected_codebase:
+        # Display previous messages
         if st.session_state.messages:
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # In the main chat function
-        prompt = st.chat_input("Chat...")
-
         # Optional image input
-        image = st.file_uploader("Optionally upload an image for multimodal input:", type=["png", "jpg", "jpeg"])
+        image = st.file_uploader("Upload an image for multimodal input: (Optional)", type=["png", "jpg", "jpeg"])
 
-        # Display image uploaded
+        # Display preview of image uploaded
         if image:
-            try:
-                st.image(image, caption="Uploaded Image")
-                st.write(f"File type: {image.type}, Name: {image.name}, Size: {image.size}")
-            except Exception as e:
-                st.error(f"Error handling the uploaded image: {e}")
+            st.image(image, caption="Uploaded Image")
+            st.write(f"File type: {image.type}, Name: {image.name}, Size: {image.size}")
+            st.success("Image uploaded successfuly!")
+            
+        # Chat input
+        prompt = st.chat_input("Chat...")
+            
+        # Only run if prompt is provided
+        if prompt:
+            # Switch between models based on user selection
+            if st.session_state.selected_model == "Groq's Llama 3.1":
+                llm_response = perform_rag(groq_client, prompt, st.session_state.selected_codebase, "Groq's Llama 3.1")
+            else:
+                llm_response = perform_rag(genai, prompt, st.session_state.selected_codebase, "Google Gemini", image=image)
 
-        if prompt or image:
-            st.session_state.messages.append({"role": "user", "content": prompt or "Image input provided"})
-            with st.chat_message("user"):
-                st.markdown(prompt or "Image uploaded")
-
-            try:
-                # Switch between models based on user selection
-                if st.session_state.selected_model == "Groq's Llama 3.1":
-                    llm_response = perform_rag(groq_client, prompt, st.session_state.selected_codebase, "Groq's Llama 3.1")
-                else:
-                    llm_response = perform_rag(genai, prompt, st.session_state.selected_codebase, "Google Gemini", image=image)
-
-                st.session_state.messages.append({"role": "assistant", "content": llm_response})
-                with st.chat_message("assistant"):
-                    st.markdown(llm_response)
-
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-
+            st.session_state.messages.append({"role": "assistant", "content": llm_response})
+            with st.chat_message("assistant"):
+                st.markdown(llm_response)
+        elif image and not prompt:
+            st.warning("Please provide a text prompt along with the image.")
 
 # Sidebar for codebase and model selection
 with st.sidebar:
@@ -142,3 +134,4 @@ with st.sidebar:
 # Run the main function
 if __name__ == "__main__":
     main()
+
