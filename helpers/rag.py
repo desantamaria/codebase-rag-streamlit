@@ -6,9 +6,15 @@ from dotenv import load_dotenv
 import os
 from langchain.schema import Document
 from pinecone import Pinecone
+import google.generativeai as genai
+
 
 load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+# Initialize Gemini
+genai.configure(api_key=GOOGLE_API_KEY)
 
 # Initialize Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -36,45 +42,45 @@ def upload_repo_to_pinecone(file_content, repo_url):
     )
 
 def fetch_repos_from_pincone():
-    # Example usage
     try:
-        # Retrieve index stats
-        index_stats = pinecone_index.describe_index_stats()
-        
-        # Extract namespaces from the index statistics
+        index_stats = pinecone_index.describe_index_stats()        
         all_namespaces = list(index_stats.get('namespaces', {}).keys())
         return all_namespaces
     except Exception as e:
         print(f"An error occurred: {e}")
 
-# Create embeddings given string
 def get_huggingface_embeddings(text, model_name="sentence-transformers/all-mpnet-base-v2"):
     model = SentenceTransformer(model_name)
     return model.encode(text)
 
-# Pulls relevant data from Pinecone and generates response including relevant data.
-def perform_rag(model, query, repo):
+def perform_rag(model, query, repo, selected_model):
     raw_query_embedding = get_huggingface_embeddings(query)
-
     top_matches = pinecone_index.query(vector=raw_query_embedding.tolist(), top_k=5, include_metadata=True, namespace=repo)
 
-    # Get the list of retrieved texts
     contexts = [item['metadata']['text'] for item in top_matches['matches']]
+    augmented_query = "\n" + "\n\n-------\n\n".join(contexts[:10]) + "\n-------\n\n\n\n\nMY QUESTION:\n" + query
 
-    augmented_query = "\n" + "\n\n-------\n\n".join(contexts[ : 10]) + "\n-------\n\n\n\n\nMY QUESTION:\n" + query
-
-    # Modify the prompt below as need to improve the response quality
-    system_prompt = f"""You are a Senior Software Engineer, specializing in TypeScript.
-
-    Answer any questions I have about the codebase, based on the code provided. Always consider all of the context provided when forming a response.
+    system_prompt = f"""
+    You are a Senior Software Engineer, specializing in TypeScript.
+    Answer questions based on the provided code context. Always use all available information to form your response.
     """
 
-    llm_response = model.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": augmented_query}
-        ]
-    )
+    if selected_model == "Groq's Llama 3.1":
+        # Groq's Llama 3.1 API call
+        llm_response = model.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": augmented_query}
+            ]
+        )
+        return llm_response.choices[0].message.content
 
-    return llm_response.choices[0].message.content
+    elif selected_model == "Google Gemini":
+        # Google Gemini API call
+        gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        llm_response = gemini_model.generate_content([augmented_query])
+        return llm_response.text
+
+    else:
+        raise ValueError(f"Unknown model selected: {selected_model}")
